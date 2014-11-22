@@ -32,28 +32,27 @@ func main() {
 		log.Fatal("TOUCH not found:", err)
 	}
 
-	wasTouched := false
-
+	log.Println("Inited")
+MAIN:
 	for {
 
-	TOUCH:
-		for {
-			touched, err := GetValue(touchSensor, "value0")
-			if err != nil {
-				log.Fatal("Ir sensor error:", err)
-			}
+		if wasTouched(touchSensor, leftEngine, rightEngine) {
+			log.Println("Was touched")
+			continue
+		}
 
-			if touched == "1" {
-				wasTouched = true
-				Run(leftEngine, rightEngine, "-100", time.Microsecond*500)
-				continue TOUCH
-			} else {
-				if wasTouched {
-					wasTouched = false
-					TurnLeft(leftEngine, rightEngine, "100", time.Microsecond*500)
-				}
-				break TOUCH
-			}
+		log.Println("Was NOT touched")
+
+		touched, err := GetValue(touchSensor, "value0")
+		if err != nil {
+			log.Fatal("Ir sensor error:", err)
+		}
+
+		if touched == "1" {
+			Stop(leftEngine, rightEngine)
+			Run(leftEngine, rightEngine, "-100", time.Millisecond*1000)
+			TurnLeft(leftEngine, rightEngine, "100", time.Millisecond*500)
+			continue MAIN
 		}
 
 		dist, err := GetValue(irSensor, "value0")
@@ -77,7 +76,23 @@ func main() {
 	}
 }
 
+func wasTouched(touchSensor, leftEngine, rightEngine string) bool {
+	touched, err := GetValue(touchSensor, "value0")
+	if err != nil {
+		log.Fatal("Ir sensor error:", err)
+	}
+
+	if touched == "1" {
+		Run(leftEngine, rightEngine, "-100", time.Millisecond*1000)
+		TurnLeft(leftEngine, rightEngine, "100", time.Millisecond*500)
+		return true
+	}
+
+	return false
+}
+
 func Run(leftEngine, rightEngine, speed string, timeout time.Duration) {
+	log.Println("Run", speed, timeout)
 	FatalOnErr(SetValue(leftEngine, "duty_cycle_sp", speed))
 	FatalOnErr(SetValue(rightEngine, "duty_cycle_sp", speed))
 	FatalOnErr(SetValue(leftEngine, "run", "1"))
@@ -88,6 +103,7 @@ func Run(leftEngine, rightEngine, speed string, timeout time.Duration) {
 }
 
 func RunInf(leftEngine, rightEngine, speed string) {
+	log.Println("RunInf", speed)
 	FatalOnErr(SetValue(leftEngine, "duty_cycle_sp", speed))
 	FatalOnErr(SetValue(rightEngine, "duty_cycle_sp", speed))
 	FatalOnErr(SetValue(leftEngine, "run", "1"))
@@ -95,11 +111,13 @@ func RunInf(leftEngine, rightEngine, speed string) {
 }
 
 func Stop(leftEngine, rightEngine string) {
+	log.Println("STOP")
 	FatalOnErr(SetValue(leftEngine, "run", "0"))
 	FatalOnErr(SetValue(rightEngine, "run", "0"))
 }
 
 func TurnLeft(leftEngine, rightEngine, speed string, timeout time.Duration) {
+	log.Println("TurnLeft", speed, timeout)
 	FatalOnErr(SetValue(leftEngine, "duty_cycle_sp", "-"+speed))
 	FatalOnErr(SetValue(rightEngine, "duty_cycle_sp", speed))
 	FatalOnErr(SetValue(leftEngine, "run", "1"))
@@ -110,6 +128,7 @@ func TurnLeft(leftEngine, rightEngine, speed string, timeout time.Duration) {
 }
 
 func TurnRight(leftEngine, rightEngine, speed string, timeout time.Duration) {
+	log.Println("TurnRight", speed, timeout)
 	FatalOnErr(SetValue(leftEngine, "duty_cycle_sp", speed))
 	FatalOnErr(SetValue(rightEngine, "duty_cycle_sp", "-"+speed))
 	FatalOnErr(SetValue(leftEngine, "run", "1"))
